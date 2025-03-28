@@ -5,7 +5,7 @@
   HAAS post processor configuration.
 
   $Revision: 44021 01c96fb7b052896b517cbbe46c5314505d9f4cfc $
-  $Date: 2022-11-04 13:47:45 $
+  $Date: 2025-03-28 19:37:00 $
 
   FORKID {241E0993-8BE0-463b-8888-47968B9D7F9F}
 */
@@ -23,7 +23,7 @@ extension = "nc";
 programNameIsInteger = true;
 setCodePage("ascii");
 
-capabilities = CAPABILITY_MILLING | CAPABILITY_MACHINE_SIMULATION;
+capabilities = CAPABILITY_TURNING | CAPABILITY_MACHINE_SIMULATION;
 tolerance = spatial(0.002, MM);
 
 minimumChordLength = spatial(0.25, MM);
@@ -59,7 +59,7 @@ properties = {
     description: "Write the version number in the header of the code.",
     group: "formats",
     type: "boolean",
-    value: false,
+    value: true, //false,
     scope: "post"
   },
   preloadTool: {
@@ -144,7 +144,7 @@ properties = {
     description: "Enable to output notes for operations.",
     group: "formats",
     type: "boolean",
-    value: false,
+    value: true,  // false,
     scope: "post"
   },
   useG0: {
@@ -152,7 +152,7 @@ properties = {
     description: "Specifies that G0s should be used for rapid moves when moving along a single axis.",
     group: "preferences",
     type: "boolean",
-    value: false,
+    value: true, // false
     scope: "post"
   },
   safePositionMethod: {
@@ -283,7 +283,7 @@ properties = {
     description: "Specifies whether clamp codes for rotary axes should be output. For simultaneous toolpaths rotary axes will always get unclamped.",
     group: "multiAxis",
     type: "boolean",
-    value: true,
+    value: false, //true,
     scope: "post"
   },
   useMultiAxisFeatures: {
@@ -312,6 +312,9 @@ wcsDefinitions = {
     { name: "Extended", format: "G154 P", range: [1, 99] }
   ]
 };
+
+// tool offset for the singular chuck tool
+var lengthOffset = null;
 
 var singleLineCoolant = false; // specifies to output multiple coolant codes in one line rather than in separate lines
 // samples:
@@ -814,7 +817,6 @@ function onOpen() {
     error(localize("Program name has not been specified."));
     return;
   }
-
   if (getProperty("useG0")) {
     writeComment(localize("Using G0 which travels along dogleg path."));
   } else {
@@ -882,6 +884,21 @@ function onOpen() {
         writeComment(comment);
       }
     }
+  }
+
+  // IG: find tool offset for tool used as turning chuck
+  const tool_regex = /T(\d+)/g
+
+  if (!programComment) {
+    error(localize("Provide program comment with tool number used as chuck when running Post Process."));
+  }
+  length_offset_found = programComment.match(tool_regex)
+  if (length_offset_found == null) {
+    error(localize("Tool number not found in program comment."));
+  } else if (length_offset_found.length != 1) {
+    error(localize("Multiple tool numbers found in program comment."));
+  } else {
+    lengthOffset = Number(length_offset_found[0].substr(1))
   }
 
   // optionally cycle through all tools
@@ -986,7 +1003,7 @@ function onOpen() {
   }
 
   // absolute coordinates and feed per min
-  writeBlock(gAbsIncModal.format(90), gPlaneModal.format(17));
+  writeBlock(gAbsIncModal.format(90), gPlaneModal.format(18));  // IG change from XY -> XZ plane
   gFeedModeModal.format(94); // G94 is an option on pre-NGC controls and can generate an error
 
   switch (unit) {
@@ -1193,7 +1210,8 @@ function getFeed(f) {
     }
     currentFeedId = undefined; // force Q feed next time
   }
-  return feedOutput.format(f); // use feed value
+  // IG: lathe mode feed is in mm/rev, so we convert it to mm/min
+  return feedOutput.format(f * spindleSpeed); // use feed value
 }
 
 function initializeActiveFeeds() {
@@ -1913,13 +1931,27 @@ function onSection() {
     }
 
     skipBlock = !insertToolCall;
-    writeToolBlock(
-      "T" + toolFormat.format(tool.number),
-      mFormat.format(6)
-    );
+    writeComment("T" + tool.number + ": " + tool.description + "; " + tool.comment)
+    // IG: extract work offset from comment
+    const wcs_regex = /G(\d+)/g
+    wcs = "G54"
     if (tool.comment) {
-      writeComment(tool.comment);
+      tool_wcs_found = tool.comment.match(wcs_regex)
+      if (tool_wcs_found != null) {
+        if (tool_wcs_found.length != 1) {
+          error(localize("Multiple work offsets found in tool comment."));
+        } else {
+          wcs = tool_wcs_found[0]
+        }
+      }
     }
+    // IG: instead of selecting a tool, select Work offset / Work Coordinate System!
+    writeBlock(wcs)
+    // writeToolBlock(
+    //   "T" + toolFormat.format(tool.number),
+    //   mFormat.format(6)
+    // );
+
     if (measureTool) {
       writeToolMeasureBlock(tool, false);
     }
@@ -2006,7 +2038,7 @@ function onSection() {
     if (!skipBlock) {
       forceWorkPlane();
     }
-    writeBlock(currentSection.wcs);
+    // writeBlock(currentSection.wcs);  // IG: we set work coordinate system when selecting turning tool!
     currentWorkOffset = currentSection.workOffset;
   }
 
@@ -2042,7 +2074,7 @@ function onSection() {
     (!isFirstSection() && (currentSection.isMultiAxis() != getPreviousSection().isMultiAxis()))) {
     var _skipBlock = !(insertToolCall || retracted ||
       (!isFirstSection() && (currentSection.isMultiAxis() != getPreviousSection().isMultiAxis())));
-    var lengthOffset = tool.lengthOffset;
+    // IG: Length offset is from the tool used as chuck at startup
     if ((lengthOffset > 200 && lengthOffset < 1000) || lengthOffset > 9999) {
       error(localize("Length offset out of range."));
       return;
@@ -2058,6 +2090,7 @@ function onSection() {
         skipBlock = _skipBlock;
         writeBlock(gAbsIncModal.format(90), gMotionModal.format(G), xOutput.format(initialPosition.x), yOutput.format(initialPosition.y), F);
         skipBlock = _skipBlock;
+        writeComment("Tool length offset from program comment: T" + lengthOffset)
         writeBlock(
           gMotionModal.format(0),
           conditional(!currentSection.isMultiAxis() || !operationSupportsTCP, gFormat.format(43)),
