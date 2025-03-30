@@ -1414,7 +1414,7 @@ function setWorkPlane(abc) {
   }
 
   skipBlock = _skipBlock;
-  positionABC(abc, true);
+  // positionABC(abc, true);
 
   if (!currentSection.isMultiAxis()) {
     skipBlock = _skipBlock;
