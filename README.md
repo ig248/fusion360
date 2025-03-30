@@ -34,3 +34,7 @@ and as a precaution the postprocessor requires tool number to be set in the prog
 - extract global tool offset index from [program comment](https://github.com/ig248/fusion360/commit/958b509f2496e562853f08356eb5f7cf07d5966f#diff-e22d2b0b6a233a61771d4c87417e544562ef05dd2084ba6c2d962079acb0e6bcR26)
 - set _work offset_ (from tool comment) instead of _tool offset_ on [tool change](https://github.com/ig248/fusion360/commit/958b509f2496e562853f08356eb5f7cf07d5966f#diff-e22d2b0b6a233a61771d4c87417e544562ef05dd2084ba6c2d962079acb0e6bcR26)
 - [convert feed](https://github.com/ig248/fusion360/commit/958b509f2496e562853f08356eb5f7cf07d5966f#diff-e22d2b0b6a233a61771d4c87417e544562ef05dd2084ba6c2d962079acb0e6bcR26) from mm/rev to mm/min
+
+# Links
+- https://cam.autodesk.com/posts/posts/guides/Post%20Processor%20Training%20Guide.pdf
+- https://academy.titansofcnc.com/files/Fundamentals_of_CNC_Machining.pdf
