@@ -9,7 +9,11 @@
 
   FORKID {241E0993-8BE0-463b-8888-47968B9D7F9F}
 */
+VSCODE_DEBUGGING = false;  // set to true for debugging
 
+if (VSCODE_DEBUGGING) {
+  programComment = "Using tool T10"
+}
 description = "HAAS (pre-NGC)";
 vendor = "Haas Automation";
 vendorUrl = "https://www.haascnc.com";
@@ -314,7 +318,7 @@ wcsDefinitions = {
 };
 
 // tool offset for the singular chuck tool
-var lengthOffset = null;
+var lengthOffset = -1;
 
 var singleLineCoolant = false; // specifies to output multiple coolant codes in one line rather than in separate lines
 // samples:
