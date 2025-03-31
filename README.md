@@ -4,6 +4,24 @@
 This repo contains a modification of the standard Haas mill post-processor.
 It allows turning parts chucked up in the spindle, with turning tools mounted to the table.
 
+![example part](screenshots/example_part.png)
+
+### Features
+#### Supported
+- turning/facing/parting etc via linear and arc moves
+
+#### Needs testing
+- [] ID turning/boring
+- [] center drilling
+
+#### To be added
+- [] external single-point threading
+- [] internal single-point threading
+- [] internal tapping (?)
+
+#### Not supported
+- constant surface speed
+
 ### General offset considerations
 With the part chucked up in a tool holder and tools fixed to the table, we need to set up _work offsets_ corresponding to each tool.
 At the same time, the _tool offsets_ will correspond to different parts to be machined.
